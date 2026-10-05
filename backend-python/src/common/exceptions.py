@@ -5,11 +5,11 @@ from fastapi import status
 
 class AppException(Exception):
     def __init__(
-            self, 
-            code: str, 
-            message: str, 
-            status_code: int = status.HTTP_400_BAD_REQUEST, 
-            details: dict[str, Any] | None = None
+        self,
+        code: str,
+        message: str,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
@@ -24,7 +24,7 @@ class NotFoundException(AppException):
             code="NOT_FOUND",
             message=f"{resource} with id '{identifier}' not found",
             status_code=status.HTTP_404_NOT_FOUND,
-            details={"resource": resource, "identifier": identifier}
+            details={"resource": resource, "identifier": identifier},
         )
 
 
