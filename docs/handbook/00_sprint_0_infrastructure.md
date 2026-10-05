@@ -10,11 +10,12 @@
    - **MinIO S3** (объектное хранилище файлов документов и медиа).
    - **Apache Kafka 3.8 (KRaft mode)** (распределенный журнал событий и Event-Driven Architecture) + **Kafka-UI**.
 2. Каркас **FastAPI (Python 3.14)**:
-   - Pydantic Settings для строгой валидации переменных окружения.
+   - Pydantic Settings для строгой валидации переменных окружения (Fail-Fast принцип).
    - Единый **API Envelope** (`ok`, `data`, `error`).
    - Иерархия доменных исключений (`AppException`).
    - **Correlation ID Middleware** для сквозного отслеживания запросов (`X-Request-ID`).
-   - Асинхронное ядро базы данных на базе **SQLAlchemy 2.0 Async + asyncpg**.
+   - Асинхронное ядро базы данных на базе **SQLAlchemy 2.0 Async + asyncpg** (`pool_pre_ping=True`, `expire_on_commit=False`).
+   - Модуль **Healthcheck** (`/api/v1/health/live` и `/api/v1/health/ready` с реальным пингом Postgres и Redis).
 3. Каркас **Go 1.26+**:
    - Чистая архитектура (Clean Architecture / Standard Go Layout).
    - Пул соединений `pgxpool`.
@@ -23,7 +24,7 @@
 
 ---
 
-## 2. Что создано и почему (Шаг 0: Инфраструктура)
+## 2. Что создано и почему (Шаг 0.1: Инфраструктура)
 
 ### 2.1 Файлы переменных окружения
 - [infra/.env](../../infra/.env) и [infra/.env.example](../../infra/.env.example):
@@ -52,10 +53,58 @@
 
 ---
 
-## 3. Доступные веб-интерфейсы инфраструктуры
+## 3. Что создано и почему (Шаг 0.2: Каркас FastAPI на Python 3.14)
+
+### 3.1 Зависимости и пакетный менеджер
+- [backend-python/pyproject.toml](../../backend-python/pyproject.toml):
+  - Использован **`uv`** (пакетный менеджер нового поколения на Rust) по стандарту **PEP 621**.
+  - Зафиксирован стек: `fastapi`, `uvicorn[standard]`, `pydantic-settings`, `sqlalchemy[asyncio]`, `asyncpg`, `redis`, `aiokafka`, `pwdlib[argon2]`, `pyjwt`, `httpx`.
+  - Настроен линтер `ruff` и тестовый фреймворк `pytest-asyncio`.
+
+### 3.2 Конфигурация и валидация
+- [backend-python/src/core/config.py](../../backend-python/src/core/config.py):
+  - Класс `Settings` на базе `pydantic-settings`.
+  - Принцип **Fail-Fast**: приложение не запустится, если в `.env` отсутствует обязательный секрет или передан неверный тип данных.
+  - Синглтон через `@lru_cache def get_settings()`: позволяет легко подменять конфигурацию в тестах через `app.dependency_overrides`.
+
+### 3.3 Подключение к PostgreSQL
+- [backend-python/src/core/database.py](../../backend-python/src/core/database.py):
+  - Асинхронный движок `create_async_engine` с диалектом `postgresql+asyncpg`.
+  - `pool_pre_ping=True`: автоматический пинг (`SELECT 1`) перед выдачей соединения из пула, защищает от разрывов соединений по таймауту.
+  - `expire_on_commit=False`: предотвращает падение `MissingGreenlet` при чтении полей ORM после коммита.
+  - Базовый класс `Base(AsyncAttrs, DeclarativeBase)` для моделей.
+  - Функция генератора сессий `get_db()` с автооткатом (`rollback()`) при ошибках.
+
+### 3.4 Контракты ответов и ошибок
+- [backend-python/src/common/envelope.py](../../backend-python/src/common/envelope.py):
+  - Единый контракт `ApiResponse[T]` (PEP 695 Type Parameter Syntax): `{ "ok": true, "data": ..., "error": null }`.
+- [backend-python/src/common/exceptions.py](../../backend-python/src/common/exceptions.py):
+  - Иерархия доменных исключений (`AppException`, `NotFoundException`, `UnauthorizedException`, `ForbiddenException`, `ConflictException`, `TenantAccessDeniedException`).
+  - Бизнес-логика сервисов изолирована от HTTP-слоя.
+
+### 3.5 Middleware и перехватчики
+- [backend-python/src/middleware/correlation.py](../../backend-python/src/middleware/correlation.py):
+  - Сквозной Correlation ID через корутино-безопасный `contextvars.ContextVar`.
+  - Проброс и возврат заголовка `X-Request-ID`.
+- [backend-python/src/middleware/error_handler.py](../../backend-python/src/middleware/error_handler.py):
+  - Глобальный перехват `AppException`, `RequestValidationError` и общих `Exception`.
+  - Защита от утечки системных данных и стектрейсов наружу.
+
+### 3.6 Модуль здоровья и точка входа
+- [backend-python/src/modules/health/routes.py](../../backend-python/src/modules/health/routes.py):
+  - `/api/v1/health/live`: проверка живости процесса.
+  - `/api/v1/health/ready`: реальный пинг PostgreSQL (`SELECT 1`) и Redis (`PING`). При сбое возвращает `503 Service Unavailable`.
+- [backend-python/src/main.py](../../backend-python/src/main.py):
+  - Современный `@asynccontextmanager lifespan` с корректным Graceful Shutdown (`async_engine.dispose()`).
+  - Подключение CORS, CorrelationId, Exception Handlers и роутера.
+
+---
+
+## 4. Доступные веб-интерфейсы инфраструктуры
 
 | Сервис | Назначение | URL | Логин / Пароль (из .env) |
 |---|---|---|---|
+| **FastAPI Swagger UI** | Автодокументация API | [http://localhost:8000/docs](http://localhost:8000/docs) | Без авторизации |
 | **Kafka UI** | Мониторинг топиков и событий Kafka | [http://localhost:8080](http://localhost:8080) | Без авторизации |
 | **MinIO Console** | S3 веб-хранилище документов | [http://localhost:9001](http://localhost:9001) | `minio_admin` / `minio_password` |
 | **RabbitMQ UI** | Мониторинг очередей задач | [http://localhost:15672](http://localhost:15672) | `rabbit_user` / `rabbit_password` |
