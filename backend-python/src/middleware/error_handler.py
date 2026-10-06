@@ -9,6 +9,7 @@ from src.common.exceptions import AppException
 
 logger = logging.getLogger("crm.api")
 
+
 def setup_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
     async def app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
@@ -17,10 +18,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
             message=exc.message,
             details=exc.details,
         )
-        return JSONResponse(
-            status_code=exc.status_code, 
-            content=envelope.model_dump(mode="json")
-        )
+        return JSONResponse(status_code=exc.status_code, content=envelope.model_dump(mode="json"))
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -61,8 +59,4 @@ def setup_exception_handlers(app: FastAPI) -> None:
             message=exc.detail if isinstance(exc.detail, str) else "HTTP error",
             details={"status_code": exc.status_code},
         )
-        return JSONResponse(
-            status_code=exc.status_code, 
-            content=envelope.model_dump(mode="json")
-        )
-
+        return JSONResponse(status_code=exc.status_code, content=envelope.model_dump(mode="json"))
