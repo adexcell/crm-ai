@@ -41,9 +41,13 @@ async def readiness(
         is_healthy = False
 
     status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-    envelope = ApiResponse.success(checks) if is_healthy else ApiResponse.failure(
-        code="SERVICE_UNAVAILABLE",
-        message="One or more dependencies are unhealthy",
-        details=checks,
+    envelope = (
+        ApiResponse.success(checks)
+        if is_healthy
+        else ApiResponse.failure(
+            code="SERVICE_UNAVAILABLE",
+            message="One or more dependencies are unhealthy",
+            details=checks,
+        )
     )
     return JSONResponse(status_code=status_code, content=envelope.model_dump(mode="json"))
