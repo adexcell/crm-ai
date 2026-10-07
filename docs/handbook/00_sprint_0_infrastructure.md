@@ -100,7 +100,42 @@
 
 ---
 
-## 4. Доступные веб-интерфейсы инфраструктуры
+## 4. Что создано и почему (Шаг 0.4: Каркас Go 1.26+)
+
+### 4.1 Структура проекта (Standard Go Layout)
+- [backend-go/cmd/server/main.go](../../backend-go/cmd/server/main.go):
+  - Минималистичная точка входа. Настраивает структурированный JSON-логгер `log/slog`, читает переменные окружения и подписывается на сигналы завершения ОС (`SIGINT`, `SIGTERM`) через `signal.NotifyContext`.
+- [backend-go/internal/app/app.go](../../backend-go/internal/app/app.go):
+  - Оркестратор жизненного цикла приложения. Инициализирует пул PostgreSQL, клиент Redis, собирает Chi-роутер с middleware, стартует HTTP-сервер в отдельной горутине и реализует **Graceful Shutdown** с таймаутом дренажа соединений (10 секунд).
+
+### 4.2 Конфигурация и окружение
+- [backend-go/internal/config/config.go](../../backend-go/internal/config/config.go):
+  - Парсинг конфигурации через библиотеку `caarlos0/env/v11` со строгой типизацией (`AppConfig`, `PostgresConfig`, `RedisConfig`).
+  - Поддержка чтения `.env` файлов на этапе разработки через `godotenv`.
+
+### 4.3 Доступ к данным и pgvector
+- [backend-go/internal/database/postgres.go](../../backend-go/internal/database/postgres.go):
+  - Пул соединений на базе `github.com/jackc/pgx/v5/pgxpool`.
+  - Конфигурация пула (`MinConns`, `MaxConns`, `MaxConnIdleTime`, `HealthCheckPeriod`).
+  - Fail-Fast проверка связи при старте (`pool.Ping`).
+  - Идемпотентная активация расширения для векторного поиска (`CREATE EXTENSION IF NOT EXISTS vector;`).
+
+### 4.4 Зеркальный API Envelope и Middleware
+- [backend-go/pkg/response/envelope.go](../../backend-go/pkg/response/envelope.go):
+  - Дженерик-структура `ApiResponse[T any]` полностью совпадает по формату с Python-версией: `{ "ok": bool, "data": *T, "error": *ErrorDetail }`.
+  - Хелперы `response.JSON(w, statusCode, data)` и `response.Error(w, statusCode, code, message, details)`.
+- [backend-go/internal/middleware/correlation.go](../../backend-go/internal/middleware/correlation.go):
+  - Middleware для извлечения или генерации сквозного `X-Request-ID` (UUID v4), сохраняющий его в `context.Context` запроса и в ответные HTTP-заголовки.
+
+### 4.5 Модуль Healthcheck и тестирование
+- [backend-go/internal/modules/health/handler.go](../../backend-go/internal/modules/health/handler.go):
+  - Роуты `/api/v1/health/live` (проверка жизнеспособности) и `/api/v1/health/ready` (проверка пинга Postgres и Redis).
+- [backend-go/internal/modules/health/handler_test.go](../../backend-go/internal/modules/health/handler_test.go):
+  - Юнит-тестирование эндпоинта живости через `httptest.ResponseRecorder` с валидацией структуры ответа.
+
+---
+
+## 5. Доступные веб-интерфейсы инфраструктуры
 
 | Сервис | Назначение | URL | Логин / Пароль (из .env) |
 |---|---|---|---|
