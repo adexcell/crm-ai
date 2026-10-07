@@ -13,6 +13,7 @@
    - 0.4 Каркас Go: Standard Project Layout, slog, `pgxpool`, Graceful Shutdown, API Envelope
    - 0.5 Каркас Frontend: Vue 3, Vite, TypeScript, Tailwind CSS, Storybook и дизайн-токены
 2. [Спринт 1: Аутентификация, Организации и RBAC](docs/handbook/01_sprint_1_auth_multitenancy.md) *(в процессе)*
+3. [Бэклог фундаментальной теории для углубленного изучения](docs/handbook/theory_backlog.md)
 
 ---
 
