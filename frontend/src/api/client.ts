@@ -57,3 +57,8 @@ apiClient.interceptors.response.use(
     throw new AppApiError(error.message || "Неизвестная ошибка клиента", "UNKNOWN_ERROR")
   }
 )
+
+export const api = {
+  get: <T>(url: string) => apiClient.get<T>(url) as Promise<T>,
+  post: <T>(url: string, body?: any) => apiClient.post<T>(url, body) as Promise<T>,
+}

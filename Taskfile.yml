@@ -14,3 +14,23 @@ tasks:
     desc: "Поднять Docker контейнеры"
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} up -d
+
+  down:
+    desc: "Остановить Docker контейнеры"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down -v
+
+  build:
+    desc: "Сборка образов"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} build --no-cache
+
+  up-build:
+    desc: "Сборка + запуск"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} up -d --build
+
+  restart:
+    desc: "Перезапуск (down + up)"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} down && docker compose -f {{.COMPOSE_FILE}} up -d
