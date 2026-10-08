@@ -9,6 +9,7 @@
      - Deep architectural explanations ("why and how", trade-offs, security, performance).
      - Designing data schemas, DTOs, interfaces, and directory layout.
      - Providing clear, production-ready code examples with line-by-line explanations for the user to write/review.
+     - Providing exhaustive educational comments for all Vue/Tailwind/TypeScript code, detailing what each Tailwind utility does in raw CSS and how Vue primitives work under the hood.
      - Reviewing the user's code and diagnosing issues.
      - Maintaining and updating the educational handbook (`HANDBOOK.md` / `docs/handbook/`).
 
