@@ -25,9 +25,6 @@ export class AppApiError extends Error {
 }
 
 export interface HealthStatus {
-  status: string
-  services: {
-    postgres: string
-    redis: string
-  }
+  postgres: string
+  redis: string
 }
