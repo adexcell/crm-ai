@@ -135,10 +135,57 @@
 
 ---
 
-## 5. Доступные веб-интерфейсы инфраструктуры
+## 5. Что создано и почему (Шаг 0.5: Каркас Frontend на Vue 3, Vite, Tailwind CSS и Storybook)
+
+### 5.1 Архитектурный стек фронтенда
+- [frontend/package.json](../../frontend/package.json):
+  - **Vue 3 (`<script setup lang="ts">`)**: Современный Composition API с нативным Script Setup — устраняет бойлерплейт `return { ... }` и обеспечивает авто-экспонирование переменных в шаблон.
+  - **Vite 8**: Сверхбыстрый HMR на базе нативных ES-модулей браузера в dev-режиме и оптимизированный Rollup-бандлер для продакшена.
+  - **TypeScript 7.0**: Строгая типизация пропсов, контрактов и отсутствие неявного `any`.
+
+### 5.2 Стилизация и адаптивная тема (Tailwind CSS v4)
+- [frontend/src/style.css](../../frontend/src/style.css) и [frontend/tailwind.config.js](../../frontend/tailwind.config.js):
+  - **Tailwind v4 Gotcha**: директива `@import "tailwindcss";` в связке с `@config "../tailwind.config.js";` для обратной совместимости с пользовательскими палитрами (`brand-500` индиго) и ручным переключением тем `darkMode: 'class'`.
+  - **Data-Dense палитра**: компактные размеры и CSS-переменные для светлой (`:root`) и темной (`.dark`) тем.
+  - **Интеграция с `@vueuse/core` (`useDark`)**: автоматическое считывание системной темы ОС (`prefers-color-scheme`) и сохранение ручного выбора пользователя в `localStorage`.
+
+### 5.3 Типизированный сетевой мост (Axios)
+- [frontend/src/api/types.ts](../../frontend/src/api/types.ts):
+  - Зеркальный контракт `ApiResponse<T>`: строго соответствует бэкендам FastAPI и Go (`{ ok, data, error }`).
+  - Класс доменных ошибок `AppApiError`.
+- [frontend/src/api/client.ts](../../frontend/src/api/client.ts):
+  - **Request Interceptor**: автоматическая генерация сквозного UUID `X-Request-ID` (Correlation ID) через `crypto.randomUUID()`.
+  - **Response Interceptor**: авто-распаковка Envelope (`payload?.data ?? payload`) при успехе и трансляция серверных кодов ошибок в типизированный `AppApiError`.
+  - Лаконичные хелперы `api.get<T>()` и `api.post<T>()`.
+- [frontend/src/api/modules/health.ts](../../frontend/src/api/modules/health.ts):
+  - Методы `checkLiveness()` и `checkReadiness()`, подключенные к реальным серверам.
+
+### 5.4 Компонентный подход: дизайн-примитив `Button`
+- [frontend/src/lib/utils.ts](../../frontend/src/lib/utils.ts):
+  - Утилита `cn(...)` на базе `clsx` и `tailwind-merge` для безопасного разрешения конфликтов классов Tailwind при переопределении стилей родителем.
+- [frontend/src/components/ui/button/Button.vue](../../frontend/src/components/ui/button/Button.vue):
+  - **Lookup Table паттерн**: словари `variantStyles` и `sizeStyles` типа `Record<string, string>` вместо громоздких `if/else`.
+  - Доступность (**a11y**): использование `focus-visible:` вместо `focus:` предотвращает «залипание» фокуса при кликах мышью, сохраняя обводку при навигации клавишей `Tab`.
+  - Варианты: `primary`, `secondary`, `outline`, `ghost`, `danger`.
+  - Состояния: встроенный спиннер `Loader2` (`loading`), `disabled`.
+  - Паттерн «входных ворот» (**Barrel Export**): [frontend/src/components/ui/button/index.ts](../../frontend/src/components/ui/button/index.ts) для лаконичного импорта.
+
+### 5.5 Изолированная разработка в Storybook 8
+- [frontend/.storybook/main.ts](../../frontend/.storybook/main.ts) и [frontend/.storybook/preview.ts](../../frontend/.storybook/preview.ts):
+  - Интеграция с `@storybook/vue3-vite` и `@storybook/addon-essentials`.
+  - Импорт `../src/style.css` для рендеринга стилей Tailwind внутри Canvas.
+  - Центрированный лейаут (`layout: 'centered'`).
+- [frontend/src/components/ui/button/Button.stories.ts](../../frontend/src/components/ui/button/Button.stories.ts):
+  - Спецификация CSF 3 со всеми историями (`Primary`, `Secondary`, `Outline`, `Ghost`, `Danger`, `Loading`, `Disabled`) и интерактивной панелью Controls.
+
+---
+
+## 6. Доступные веб-интерфейсы инфраструктуры
 
 | Сервис | Назначение | URL | Логин / Пароль (из .env) |
 |---|---|---|---|
+| **Frontend CRM (Vite Dev)** | Веб-интерфейс платформы CRM AI | [http://localhost:5173](http://localhost:5173) | Без авторизации |
+| **Storybook** | Каталог UI-компонентов и дизайн-система | [http://localhost:6006](http://localhost:6006) | Без авторизации |
 | **FastAPI Swagger UI** | Автодокументация API | [http://localhost:8000/docs](http://localhost:8000/docs) | Без авторизации |
 | **Kafka UI** | Мониторинг топиков и событий Kafka | [http://localhost:8080](http://localhost:8080) | Без авторизации |
 | **MinIO Console** | S3 веб-хранилище документов | [http://localhost:9001](http://localhost:9001) | `minio_admin` / `minio_password` |
