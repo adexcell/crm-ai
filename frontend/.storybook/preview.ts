@@ -1,8 +1,8 @@
-import type { Preview } from '@storybook/vu3';
+import type { Preview } from '@storybook/vue3';
 import '../src/style.css';
 
 const preview: Preview = {
-  parametres: {
+  parameters: {
     layout: 'centered',
     controls: {
       matchers: {
