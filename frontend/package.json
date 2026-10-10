@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
     "@lucide/vue": "^1.52.0",
@@ -19,12 +20,15 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/vue3-vite": "^8.6.18",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.1",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.29",
+    "storybook": "^8.6.18",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
