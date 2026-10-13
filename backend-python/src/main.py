@@ -7,15 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import get_settings
 from src.core.database import async_engine
+from src.core.logging import setup_logging
 from src.middleware.correlation import CorrelationIdMiddleware
 from src.middleware.error_handler import setup_exception_handlers
 from src.modules.auth.routes import router as auth_router
 from src.modules.health.routes import router as health_router
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-)
+setup_logging(level=logging.INFO)
 logger = logging.getLogger("crm.main")
 settings = get_settings()
 
@@ -57,3 +55,14 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "src.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
+        log_config=None,
+    )
