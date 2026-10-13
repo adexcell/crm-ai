@@ -9,6 +9,7 @@ from src.core.config import get_settings
 from src.core.database import async_engine
 from src.middleware.correlation import CorrelationIdMiddleware
 from src.middleware.error_handler import setup_exception_handlers
+from src.modules.auth.routes import router as auth_router
 from src.modules.health.routes import router as health_router
 
 logging.basicConfig(
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     setup_exception_handlers(app)
 
     app.include_router(health_router, prefix="/api/v1")
+    app.include_router(auth_router, prefix="/api/v1")
 
     return app
 
