@@ -1,7 +1,15 @@
+from enum import StrEnum
 from functools import lru_cache
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class AppEnvironment(StrEnum):
+    DEVELOPMENT = "development"
+    STAGING = "staging"
+    PRODUCTION = "production"
+    TESTING = "testing"
 
 
 class Settings(BaseSettings):
@@ -13,7 +21,7 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "CRM AI Backend"
-    APP_ENV: str = "development"
+    APP_ENV: AppEnvironment = AppEnvironment.DEVELOPMENT
     DEBUG: bool = True
     PORT: int = 8000
     HOST: str = "0.0.0.0"
@@ -48,6 +56,10 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:6006",
     ]
+
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV == AppEnvironment.PRODUCTION
 
     @computed_field  # type: ignore[prop-decorator]
     @property

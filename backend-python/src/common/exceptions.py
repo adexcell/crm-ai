@@ -18,6 +18,19 @@ class AppException(Exception):
         self.details = details or {}
 
 
+class BadRequestException(AppException):
+    def __init__(
+        self,
+        message: str = "Bad request",
+        code: str = "BAD_REQUEST",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class NotFoundException(AppException):
     def __init__(self, resource: str, identifier: Any) -> None:
         super().__init__(
