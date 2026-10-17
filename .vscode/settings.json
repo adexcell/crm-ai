@@ -1,0 +1,11 @@
+{
+  "workbench.experimental.modernUIUppercaseViewHeaders": true,
+  "window.density.editorTabHeight": "default",
+  "editor.stickyTabStops": false,
+  "workbench.editor.wrapTabs": false,
+  "workbench.secondarySideBar.forceMaximized": false,
+  "editor.suggest.showStatusBar": false,
+  "workbench.activityBar.compact": false,
+  "workbench.activityBar.autoHide": false,
+  "window.commandCenter": false
+}

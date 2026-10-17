@@ -12,7 +12,7 @@ class ErrorDetail(BaseModel):
 
 
 class ApiResponse[T](BaseModel):
-    ok: bool
+    ok: bool = True
     data: T | None = None
     error: ErrorDetail | None = None
 

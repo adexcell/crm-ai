@@ -11,8 +11,16 @@ def setup_logging(level: int = logging.INFO) -> None:
         handlers=[
             RichHandler(
                 rich_tracebacks=True,
-                tracebacks_show_locals=True,
+                tracebacks_show_locals=False,
+                tracebacks_suppress=[
+                    "uvicorn",
+                    "starlette",
+                    "fastapi",
+                    "pydantic",
+                    "anyio",
+                ],
                 show_path=False,
+                omit_repeated_times=False,
                 markup=True,
             )
         ],
