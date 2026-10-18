@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:8000/api/v1/auth
+@contentType = application/json
+
+### -------------------------------------------------------
+### 1. Регистрация нового пользователя и владельца компании
+### -------------------------------------------------------
+# @name register
+POST {{baseUrl}}/register
+Content-Type: {{contentType}}
+
+{
+  "email": "owner_test_2@acme.com",
+  "password": "SuperSecretPassword123!",
+  "first_name": "Алексей",
+  "last_name": "Смирнов",
+  "organization_name": "Acme Innovations"
+}
+
+### -------------------------------------------------------
+### 2. Вход в систему (Login)
+### -------------------------------------------------------
+# @name login
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "owner_test_1@acme.com",
+  "password": "SuperSecretPassword123!"
+}
+
+### Сохраняем access token из ответа регистрации в переменную
+@authToken = {{login.response.body.data.access_token}}
+
+### -------------------------------------------------------
+### 3. Получение профиля текущего пользователя (/me)
+### -------------------------------------------------------
+# @name getMe
+GET {{baseUrl}}/me
+Authorization: Bearer {{authToken}}
+
+### -------------------------------------------------------
+### 4. Обновление токена
+### -------------------------------------------------------
+# @name refresh
+POST {{baseUrl}}/refresh
+
+
+### -------------------------------------------------------
+### 5. Выход из системы
+### -------------------------------------------------------
+# @name logout
+POST {{baseUrl}}/logout

@@ -156,3 +156,12 @@ async def get_me(
     current_user: User = Depends(get_current_user),
 ) -> ApiResponse[UserResponse]:
     return ApiResponse(data=UserResponse.model_validate(current_user))
+
+
+# TODO:
+# add routes
+# post register/request
+# post register/confirm
+# patch me
+# post forgot-password
+# post reset-password

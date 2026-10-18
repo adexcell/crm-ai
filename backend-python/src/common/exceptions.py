@@ -32,9 +32,9 @@ class BadRequestException(AppException):
 
 
 class NotFoundException(AppException):
-    def __init__(self, resource: str, identifier: Any) -> None:
+    def __init__(self, resource: str, identifier: Any, code: str = "NOT_FOUND") -> None:
         super().__init__(
-            code="NOT_FOUND",
+            code=code,
             message=f"{resource} with id '{identifier}' not found",
             status_code=status.HTTP_404_NOT_FOUND,
             details={"resource": resource, "identifier": identifier},
@@ -42,27 +42,31 @@ class NotFoundException(AppException):
 
 
 class UnauthorizedException(AppException):
-    def __init__(self, message: str = "Authentication required") -> None:
+    def __init__(
+        self, message: str = "Authentication required", code: str = "UNAUTHORIZED"
+    ) -> None:
         super().__init__(
-            code="UNAUTHORIZED",
+            code=code,
             message=message,
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
 
 class ForbiddenException(AppException):
-    def __init__(self, message: str = "Permission denied") -> None:
+    def __init__(self, message: str = "Permission denied", code: str = "PERMISSION_DENIED") -> None:
         super().__init__(
-            code="PERMISSION_DENIED",
+            code=code,
             message=message,
             status_code=status.HTTP_403_FORBIDDEN,
         )
 
 
 class ConflictException(AppException):
-    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, message: str, details: dict[str, Any] | None = None, code: str = "CONFLICT"
+    ) -> None:
         super().__init__(
-            code="CONFLICT",
+            code=code,
             message=message,
             status_code=status.HTTP_409_CONFLICT,
             details=details,
@@ -70,9 +74,13 @@ class ConflictException(AppException):
 
 
 class TenantAccessDeniedException(AppException):
-    def __init__(self, message: str = "Access to the requested organization is forbidden") -> None:
+    def __init__(
+        self,
+        message: str = "Access to the requested organization is forbidden",
+        code: str = "TENANT_ACCESS_DENIED",
+    ) -> None:
         super().__init__(
-            code="TENANT_ACCESS_DENIED",
+            code=code,
             message=message,
             status_code=status.HTTP_403_FORBIDDEN,
         )

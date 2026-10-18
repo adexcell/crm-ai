@@ -7,5 +7,13 @@
   "editor.suggest.showStatusBar": false,
   "workbench.activityBar.compact": false,
   "workbench.activityBar.autoHide": false,
-  "window.commandCenter": false
+  "window.commandCenter": false,
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
 }
