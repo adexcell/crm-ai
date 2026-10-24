@@ -9,7 +9,7 @@
    - **RabbitMQ 3.13** (брокер для тяжелых фоновых задач Celery).
    - **MinIO S3** (объектное хранилище файлов документов и медиа).
    - **Apache Kafka 3.8 (KRaft mode)** (распределенный журнал событий и Event-Driven Architecture) + **Kafka-UI**.
-2. Каркас **FastAPI (Python 3.14)**:
+2. Каркас **FastAPI (Python 3.12+)**:
    - Pydantic Settings для строгой валидации переменных окружения (Fail-Fast принцип).
    - Единый **API Envelope** (`ok`, `data`, `error`).
    - Иерархия доменных исключений (`AppException`).
