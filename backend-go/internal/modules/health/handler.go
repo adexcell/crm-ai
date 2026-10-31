@@ -5,18 +5,18 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/adexcell/crm-ai-pet/internal/database"
-	"github.com/adexcell/crm-ai-pet/pkg/response"
+	"github.com/adexcell/crm-ai/internal/infra/http/response"
+	"github.com/adexcell/crm-ai/internal/infra/postgres"
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 )
 
 type Handler struct {
-	db  *database.Pool
+	db  *postgres.Pool
 	rdb *redis.Client
 }
 
-func NewHandler(db *database.Pool, rdb *redis.Client) *Handler {
+func NewHandler(db *postgres.Pool, rdb *redis.Client) *Handler {
 	return &Handler{db: db, rdb: rdb}
 }
 

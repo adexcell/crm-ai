@@ -7,13 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/adexcell/crm-ai-pet/internal/app"
-	"github.com/adexcell/crm-ai-pet/internal/config"
+	"github.com/adexcell/crm-ai/internal/app"
+	"github.com/adexcell/crm-ai/internal/config"
 )
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+		Level:     slog.LevelInfo,
+		AddSource: true,
 	}))
 	slog.SetDefault(logger)
 

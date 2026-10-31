@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/adexcell/crm-ai-pet/internal/modules/health"
-	"github.com/adexcell/crm-ai-pet/pkg/response"
+	"github.com/adexcell/crm-ai/internal/infra/http/response"
+	"github.com/adexcell/crm-ai/internal/modules/health"
 	"github.com/go-chi/chi/v5"
 )
 

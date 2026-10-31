@@ -2,7 +2,6 @@
 **/.venv
 **/__pycache__
 
-# Local development & internal agent configuration (not tracked in repo)
 AGENTS.md
 HANDBOOK.md
 TECHNICAL.md

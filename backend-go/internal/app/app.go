@@ -1,83 +1,89 @@
+// Package app
 package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
-	"time"
 
+	"github.com/adexcell/crm-ai/internal/config"
+	"github.com/adexcell/crm-ai/internal/infra/http/middleware"
+	"github.com/adexcell/crm-ai/internal/infra/http/router"
+	httpserver "github.com/adexcell/crm-ai/internal/infra/http/server"
+	"github.com/adexcell/crm-ai/internal/infra/jwt"
+	"github.com/adexcell/crm-ai/internal/infra/metrics"
+	"github.com/adexcell/crm-ai/internal/infra/postgres"
+	"github.com/adexcell/crm-ai/internal/infra/redis"
+	"github.com/adexcell/crm-ai/internal/infra/transaction"
 	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/redis/go-redis/v9"
-
-	"github.com/adexcell/crm-ai-pet/internal/config"
-	"github.com/adexcell/crm-ai-pet/internal/database"
-	"github.com/adexcell/crm-ai-pet/internal/middleware"
-	"github.com/adexcell/crm-ai-pet/internal/modules/health"
 )
 
+// Dependencies содержит все внешние инфраструктурные компоненты и синглтоны приложения.
+type Dependencies struct {
+	// Adapters
+	Postgres *postgres.Pool
+	Redis    *redis.Client
+
+	// Controllers & Cross-cutting
+	RouterHTTP *chi.Mux
+	Metrics    *metrics.Metrics
+	MW         *middleware.Middleware
+	TXManager  *transaction.Manager
+	JWTManager *jwt.Manager
+}
+
 func Run(ctx context.Context, cfg *config.Config) error {
-	dbPool, err := database.New(ctx, cfg.Postgres)
+	var (
+		err  error
+		deps Dependencies
+	)
+
+	// --------- 1. Инициализация адаптеров баз данных ---------
+	deps.Postgres, err = postgres.New(ctx, cfg.Postgres)
 	if err != nil {
-		return fmt.Errorf("database.New(): %w", err)
+		return fmt.Errorf("postgres.New: %w", err)
 	}
-	defer dbPool.Close()
-	slog.Info("Connected to PostgreSQL successfully")
+	defer deps.Postgres.Close()
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr(),
-		Password: cfg.Redis.Password,
-	})
-	defer redisClient.Close()
-
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		slog.Warn("Redis ping failed on startup (check container)", "error", err)
-	} else {
-		slog.Info("Connected to Redis successfully")
+	deps.Redis, err = redis.New(ctx, cfg.Redis)
+	if err != nil {
+		return fmt.Errorf("redis.New: %w", err)
 	}
-
-	r := chi.NewRouter()
-	r.Use(chimiddleware.Recoverer)
-	r.Use(middleware.CorrelationID)
-
-	healthHandler := health.NewHandler(dbPool, redisClient)
-	r.Route("/api/v1", func(r chi.Router) {
-		healthHandler.RegisterRoutes(r)
-	})
-
-	serverAddr := fmt.Sprintf("%s:%d", cfg.App.Host, cfg.App.Port)
-	server := &http.Server{
-		Addr:         serverAddr,
-		Handler:      r,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	serverErr := make(chan error, 1)
-	go func() {
-		slog.Info("HTTP server listening", "addr", serverAddr)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serverErr <- fmt.Errorf("server.ListenAndServe: %w", err)
-		}
+	defer func() {
+		err := deps.Redis.Close()
+		slog.DebugContext(ctx, "closing redis", "error", err)
 	}()
 
-	select {
-	case err := <-serverErr:
-		return err
-	case <-ctx.Done():
-		slog.Info("Shutdown signal recieved, draining connections...")
+	// --------- 2. Метрики, безопасность, транзакции ---------
+	deps.Metrics = metrics.New()
+	deps.JWTManager = jwt.New(cfg.JWT)
+	deps.TXManager = transaction.New(deps.Postgres.Pool)
+	deps.MW = middleware.New(deps.JWTManager, deps.Metrics)
+
+	// --------- 3. Корневой HTTP-роутер ---------
+	deps.RouterHTTP = router.New(deps.MW)
+
+	// --------- 4. Инициализация и монтирование доменов ---------
+	authDomain, err := NewAuthDomain(&deps, cfg)
+	if err != nil {
+		return fmt.Errorf("initializing auth domain: %w", err)
 	}
+	_ = authDomain
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// --------- 5. Запуск HTTP сервера ---------
+	server := httpserver.New(deps.RouterHTTP, cfg.HTTP)
+	defer server.Close()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("server.Shutdown: %w", err)
-	}
+	slog.Info("Application started successfully")
 
-	slog.Info("Server stopped cleanly. Goodbye")
+	// Ожидаем сигнал завершения (отмена переданного ctx из main.go)
+	<-ctx.Done()
+
+	slog.Info("Application received shutdown signal, draining connections...")
+
+	// При выходе сработают все defer в порядке LIFO:
+	// 1. server.Close()        — перестает принимать новые запросы и дожидается активных
+	// 2. deps.Redis.Close()    — закрывает пул Redis
+	// 3. deps.Postgres.Close() — закрывает пул соединений pgxpool
 	return nil
 }

@@ -55,7 +55,7 @@ services:
       retries: 5
 
   minio:
-    image: firstfinger/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: crm-ai-minio
     restart: unless-stopped
     command: ["minio", "server", "/data", "--console-address", ":9001"]
@@ -66,7 +66,7 @@ services:
       - "${MINIO_API_PORT}:9000"
       - "${MINIO_CONSOLE_PORT}:9001"
     volumes:
-     - minio_data:/data
+      - minio_data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -74,7 +74,7 @@ services:
       retries: 5
 
   minio-init-buckets:
-    image: firstfinger/minio:latest
+    image: quay.io/minio/mc:latest
     container_name: crm-ai-minio-init
     depends_on:
       minio:

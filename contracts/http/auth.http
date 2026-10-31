@@ -1,52 +1,154 @@
+###
+
 @baseUrl = http://localhost:8000/api/v1/auth
 @contentType = application/json
 
-### -------------------------------------------------------
+
 ### 1. Регистрация нового пользователя и владельца компании
-### -------------------------------------------------------
+
 # @name register
-POST {{baseUrl}}/register
+
+POST {{baseUrl}}/register HTTP/1.1
 Content-Type: {{contentType}}
 
 {
-  "email": "owner_test_2@acme.com",
-  "password": "SuperSecretPassword123!",
+  "email": "owner_test_6@acme.com",
   "first_name": "Алексей",
   "last_name": "Смирнов",
-  "organization_name": "Acme Innovations"
-}
-
-### -------------------------------------------------------
-### 2. Вход в систему (Login)
-### -------------------------------------------------------
-# @name login
-POST {{baseUrl}}/login
-Content-Type: {{contentType}}
-
-{
-  "email": "owner_test_1@acme.com",
+  "organization_name": "Acme Innovations",
   "password": "SuperSecretPassword123!"
 }
 
-### Сохраняем access token из ответа регистрации в переменную
-@authToken = {{login.response.body.data.access_token}}
 
-### -------------------------------------------------------
+### 2. Вход в систему (Login)
+
+# @name login
+
+POST {{baseUrl}}/login HTTP/1.1
+Content-Type: {{contentType}}
+
+{
+  "email": "owner_test_6@acme.com",
+  "password": "BrandNewPassword2026!"
+}
+
+
+### Сохраняем access token из ответа регистрации в переменную
+
+@authToken = {{login.response.body.data.tokens.access_token}}
+@refreshCookie = {{login.response.headers.Set-Cookie}}
+
+
 ### 3. Получение профиля текущего пользователя (/me)
-### -------------------------------------------------------
+
 # @name getMe
-GET {{baseUrl}}/me
+
+GET {{baseUrl}}/me HTTP/1.1
 Authorization: Bearer {{authToken}}
 
-### -------------------------------------------------------
+
 ### 4. Обновление токена
-### -------------------------------------------------------
+
 # @name refresh
-POST {{baseUrl}}/refresh
+
+POST {{baseUrl}}/refresh HTTP/1.1
+Cookie: {{refreshCookie}}
 
 
-### -------------------------------------------------------
 ### 5. Выход из системы
-### -------------------------------------------------------
+
 # @name logout
-POST {{baseUrl}}/logout
+
+POST {{baseUrl}}/logout HTTP/1.1
+
+
+### 6. Получение списка активных сессий
+
+# @name sessions
+
+GET {{baseUrl}}/sessions HTTP/1.1
+Authorization: Bearer {{authToken}}
+Cookie: {{refreshCookie}}
+
+
+### 7. Обновление профиля
+
+# @name updateProfile
+
+PATCH {{baseUrl}}/me HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "first_name": "Alexandr",
+  "last_name": "small"
+}
+
+
+### 8. Запрос на сброс пароля
+
+# @name forgotPassword
+
+POST {{baseUrl}}/forgot-password HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "owner_test_6@acme.com"
+}
+
+
+### 9. Установка нового пароля по токену
+
+# @name resetPassword
+
+POST {{baseUrl}}/reset-password HTTP/1.1
+Content-Type: application/json
+
+{
+  "new_password": "BrandNewPassword2026!",
+  "token": "19a20f84c4d80c6ea84f22e47f81e8a871ad1b2d00edb398d9c4b92bfcbba75a"
+}
+
+
+### 10. Переключение контекста организации (Switch Org)
+
+# @name switchOrg
+
+POST {{baseUrl}}/switch-org HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "organization_id": "26cbbd45-2daa-40a3-b967-529ea1c39933"
+}
+
+
+### 11. Защита от IDOR: Попытка переключиться на чужую организацию
+
+# @name switchOrgBad
+
+POST {{baseUrl}}/switch-org HTTP/1.1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "organization_id": "11111111-1111-1111-1111-111111111111"
+}
+
+
+### 12. Отзыв всех активных сессий (кроме текущей)
+
+# @name revokeAllSessions
+
+POST {{baseUrl}}/sessions/revoke-all HTTP/1.1
+Authorization: Bearer {{authToken}}
+
+
+### 13. Отзыв конкретной сессии по ID
+
+# ID берется из ответа GET /sessions
+
+@targetSessionId = 587df6c9-7cee-48da-bc43-22543300710b
+
+DELETE {{baseUrl}}/sessions/{{targetSessionId}} HTTP/1.1
+Authorization: Bearer {{authToken}}
