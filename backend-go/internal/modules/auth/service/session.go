@@ -142,7 +142,10 @@ func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {
 
 	tokenHash := crypto.HashToken(rawRefreshToken)
 	token, err := s.repo.GetRefreshTokenByHash(ctx, tokenHash)
-	if err != nil || token == nil {
+	if err != nil {
+		return fmt.Errorf("finding refresh token for logout: %w", err)
+	}
+	if token == nil {
 		return nil
 	}
 

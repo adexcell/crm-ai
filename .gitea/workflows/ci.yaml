@@ -1,0 +1,63 @@
+name: Backend Go CI/CD & Mirror
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-test:
+    name: Go Lint, Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+      - name: Run golangci-lint
+        working-directory: ./backend-go
+        run: |
+          $(go env GOPATH)/bin/golangci-lint run --config ../.golangci.yml ./...
+
+      - name: Build backend binary
+        working-directory: ./backend-go
+        run: |
+          go build -v -o /dev/null ./cmd/server/main.go
+
+      - name: Run Go tests with Race Detector
+        working-directory: ./backend-go
+        run: |
+          go test -v -race -timeout 3m ./...
+
+  mirror-to-github:
+    name: Mirror to Github
+    needs: [lint-and-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Github Mirror
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB }}
+        run: |
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo " Секрет GITHUB_MIRROR_TOKEN не настроен в Gitea, пропуск зеркалирования"
+            exit 0
+          fi
+
+          git remote add github https://adexcell:${GITHUB_TOKEN}@github.com/adexcell/crm-ai.git || true
+          git push --force github main

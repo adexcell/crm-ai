@@ -1,0 +1,52 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - errcheck
+    - nilerr
+    - bodyclose
+    - gosec
+    - revive
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Отключаем оптимизацию паддинга структур
+        - shadow # РАЗРЕШАЕМ стандартную идиому Go: if err := ...
+
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G124 # Разрешаем конфигурируемый Cookie.Secure (h.cfg.App.CookieSecure)
+        - G115 # Разрешаем безопасное приведение длины хэша len() к uint32
+
+    errcheck:
+      check-type-assertions: true
+      check-blank: false # РАЗРЕШАЕМ осознанный сброс ошибок через `_ = tx.Rollback()`
+
+    revive:
+      rules:
+        # Отключаем обязательные комментарии к каждому DTO ради чистоты кода
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: var-naming
+          disabled: true
+
+  exclusions:
+    paths:
+      - vendor
+      - contracts

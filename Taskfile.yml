@@ -1,36 +1,66 @@
-version: '3'
+version: "3"
 
-vars:
-  COMPOSE_FILE: ./docker-compose.yml
+dotenv: [".env", "backend-go/.env"]
 
 tasks:
-  lint:
-    desc: "Проверка Dockerfile и Docker Compose на ошибки"
+  default:
+    desc: "Показать список всех доступных команд"
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} config --quiet
-      # - hadolint --failure-threshold warning Dockerfile
+      - task --list
 
   up:
-    desc: "Поднять Docker контейнеры"
+    desc: "Поднять контейнеры"
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} up -d
+      - docker compose up -d
 
   down:
-    desc: "Остановить Docker контейнеры"
+    desc: "Остановить контейнеры"
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} down -v
+      - docker compose down
+
+  logs:
+    desc: "Смотреть логи баз данных в реальном времени"
+    cmds:
+      - docker compose logs -f
+
+  run-go-server:
+    desc: "Запустить Go бэкенд локально"
+    dir: backend-go
+    cmds:
+      - go run cmd/server/main.go
+
+  dev:
+    desc: "Поднять базы данных и запустить Go сервер (Fast Start)"
+    deps: [up]
+    cmds:
+      - task: run
+
+  tidy:
+    desc: "Обновить и почистить go.mod и go.sum"
+    dir: backend-go
+    cmds:
+      - go mod tidy
+
+  lint:
+    desc: "Запустить статический анализ и аудит безопасности (golangci-lint v2)"
+    dir: backend-go
+    cmds:
+      - golangci-lint run --config ../.golangci.yml ./...
+
+  test:
+    desc: "Запуск тестов"
+    dir: backend-go
+    cmds:
+      - go test -v ./...
+
+  test:race:
+    desc: "Запуск тестов с детектором гонок памяти"
+    dir: backend-go
+    cmds:
+      - go test -v -race -timeout 3m ./...
 
   build:
-    desc: "Сборка образов"
+    desc: "Скомпилировать бинарник сервера для проверки сборки"
+    dir: backend-go
     cmds:
-      - docker compose -f {{.COMPOSE_FILE}} build --no-cache
-
-  up-build:
-    desc: "Сборка + запуск"
-    cmds:
-      - docker compose -f {{.COMPOSE_FILE}} up -d --build
-
-  restart:
-    desc: "Перезапуск (down + up)"
-    cmds:
-      - docker compose -f {{.COMPOSE_FILE}} down && docker compose -f {{.COMPOSE_FILE}} up -d
+      - go build -v -o /dev/null ./cmd/server/main.go
