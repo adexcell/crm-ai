@@ -1,8 +1,8 @@
 # 🧭 Operational Progress Tracker: CRM AI
 
-> **Последнее обновление**: 2026-10-31
-> **Текущий фокус**: Спринт 1 — Аутентификация, сессии и мультитенантность (Go-First)
-> **Статус компиляции**: `go build ./...` — ✅ PASS | `go vet ./...` — ✅ PASS
+> **Последнее обновление**: 2026-11-04
+> **Текущий фокус**: Спринт 1 — Фронтенд модуля Auth (Vue 3 + TypeScript + Pinia + Storybook)
+> **Статус компиляции**: `go build ./...` — ✅ PASS | `task test:race` — ✅ PASS (0 data races)
 
 ---
 
@@ -62,10 +62,20 @@
 
 ---
 
-## ⏳ В работе прямо сейчас (NOW — Этап Б)
-- [ ] **Интеграционные тесты Go (Concurrency & Race Safety)**:
-  - Конкурентный стресс-тест с флагом `-race`: симуляция 10 одновременных запросов `/refresh` из параллельных вкладок браузера для проверки Grace Period 15 секунд (защита от гонок и ложного срабатывания Replay Attack Killswitch).
-  - Проверка корректного освобождения ресурсов транзакций при одновременной нагрузке.
+- [x] **Интеграционные тесты Go (Concurrency & Race Safety — Этап Б — DONE)**:
+  - Миграция PostgreSQL `000002_add_grace_period_to_refresh_tokens`: `revoked_at` + `replaced_by` + индекс `ix_refresh_tokens_replaced_by` — ✅ DONE.
+  - Реализация 15-секундного Grace Period в `service.RefreshToken` и цепочек ротации токенов — ✅ DONE.
+  - Конкурентный стресс-тест с флагом `-race` (`TestRefreshToken_ConcurrentGracePeriod`): симуляция 10 одновременных запросов `/refresh` из параллельных вкладок браузера, проверка попадания в `grace period hit` и 0 гонок данных — ✅ 100% PASS.
+
+---
+
+## ⏳ В работе прямо сейчас (NOW — Этап В)
+- [ ] **Frontend (Vue 3 + TypeScript + Pinia + Storybook)**:
+  - Инициализация и настройка структуры директорий `frontend/`.
+  - Дизайн-система и UI-примитивы в Storybook (Button, Input, FormField, Badge, Alert).
+  - Pinia Auth Store (строгое хранение Access JWT в RAM, управление состоянием пользователя).
+  - Axios / Fetch интерцепторы с поддержкой Web Locks API (`navigator.locks`) и BroadcastChannel для предотвращения гонок между вкладками.
+  - Страницы онбординга: Регистрация (User + Org), Логин, Сброс пароля, Выбор организации.
 
 ---
 

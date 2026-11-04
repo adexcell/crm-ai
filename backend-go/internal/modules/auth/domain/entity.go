@@ -120,14 +120,16 @@ func NewOrganizationMember(orgID, userID uuid.UUID, role OrganizationRole) (Orga
 }
 
 type RefreshToken struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	TokenHash string
-	UserAgent *string
-	IPAddress *string
-	ExpiresAt time.Time
-	IsRevoked bool
-	CreatedAt time.Time
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	TokenHash  string
+	UserAgent  *string
+	IPAddress  *string
+	ExpiresAt  time.Time
+	IsRevoked  bool
+	CreatedAt  time.Time
+	RevokedAt  *time.Time
+	ReplacedBy *uuid.UUID
 }
 
 func NewRefreshToken(

@@ -101,20 +101,21 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	refreshDays := h.cfg.JWT.RefreshTokenExpireDays
-	maxAgeSeconds := refreshDays * 24 * 60 * 60
+	if newRawRefreshToken != "" {
+		refreshDays := h.cfg.JWT.RefreshTokenExpireDays
+		maxAgeSeconds := refreshDays * 24 * 60 * 60
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    newRawRefreshToken,
-		Path:     "/api/v1/auth",
-		HttpOnly: true,
-		Secure:   h.cfg.App.CookieSecure,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   maxAgeSeconds,
-		Expires:  time.Now().Add(time.Duration(maxAgeSeconds) * time.Second),
-	})
-
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    newRawRefreshToken,
+			Path:     "/api/v1/auth",
+			HttpOnly: true,
+			Secure:   h.cfg.App.CookieSecure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   maxAgeSeconds,
+			Expires:  time.Now().Add(time.Duration(maxAgeSeconds) * time.Second),
+		})
+	}
 	response.JSON(w, http.StatusOK, tokenResp)
 }
 

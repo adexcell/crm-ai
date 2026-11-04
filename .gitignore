@@ -6,3 +6,6 @@ AGENTS.md
 HANDBOOK.md
 TECHNICAL.md
 .agents/
+
+go.work
+go.work.sum

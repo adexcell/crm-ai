@@ -12,8 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// Фейковый предрассчитанный хеш `Argon2id` для симуляции проверки несуществующего юзера
-const dummyHash = "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RGF0YVNvbWVGYWtlSGFzaEZvclRpbWluZ1Byb3RlY3Rpb24"
+const (
+	// Фейковый предрассчитанный хеш `Argon2id` для симуляции проверки несуществующего юзера
+	dummyHash = "$argon2id$v=19$m=65536,t=3,p=4$c29tZXNhbHQ$RGF0YVNvbWVGYWtlSGFzaEZvclRpbWluZ1Byb3RlY3Rpb24"
+	// Период "милосердия" для смены токена
+	GracerPeriodDuration = 15 * time.Second
+)
 
 func (s *Service) Login(ctx context.Context, input dto.LoginRequest, userAgent, clientIP string) (dto.AuthResponse, string, error) {
 	user, err := s.repo.GetUserByEmail(ctx, input.Email)
@@ -73,26 +77,14 @@ func (s *Service) Login(ctx context.Context, input dto.LoginRequest, userAgent, 
 	}, rawRefreshToken, nil
 }
 
-func (s *Service) RefreshToken(ctx context.Context, rawRefreshToken, userAgent, clientIP string) (dto.TokenResponse, string, error) {
-	tokenHash := crypto.HashToken(rawRefreshToken)
+func (s *Service) RefreshToken(ctx context.Context, newRawRefreshToken, userAgent, clientIP string) (dto.TokenResponse, string, error) {
+	tokenHash := crypto.HashToken(newRawRefreshToken)
 
 	refresh, err := s.repo.GetRefreshTokenByHash(ctx, tokenHash)
 	if err != nil {
 		return dto.TokenResponse{}, "", fmt.Errorf("finding refresh token by hash: %w", err)
 	}
 	if refresh == nil {
-		return dto.TokenResponse{}, "", domain.ErrInvalidToken
-	}
-
-	if refresh.IsRevoked {
-		err := s.repo.RevokeAllUserTokens(ctx, refresh.UserID)
-		if err != nil {
-			slog.Warn("revoking all user tokens", "err", err)
-		}
-		return dto.TokenResponse{}, "", domain.ErrTokenReplayDetected
-	}
-
-	if time.Now().After(refresh.ExpiresAt) {
 		return dto.TokenResponse{}, "", domain.ErrInvalidToken
 	}
 
@@ -109,17 +101,40 @@ func (s *Service) RefreshToken(ctx context.Context, rawRefreshToken, userAgent, 
 		return dto.TokenResponse{}, "", err
 	}
 
-	tokenEntity, rawRefreshToken, err := s.issueRefreshToken(user.ID, userAgent, clientIP)
+	if refresh.IsRevoked {
+		if refresh.RevokedAt != nil && time.Since(*refresh.RevokedAt) <= GracerPeriodDuration {
+			slog.InfoContext(ctx, "grace period hit: parallel refresh request accepted",
+				"user_id", refresh.UserID,
+				"token_id", refresh.ID,
+			)
+			tokenResponse, err := s.issueAccessToken(user.ID, orgID, user.Email, role)
+			if err != nil {
+				return dto.TokenResponse{}, "", fmt.Errorf("issuing access token in grace period: %w", err)
+			}
+			return tokenResponse, "", nil
+		}
+		err := s.repo.RevokeAllUserTokens(ctx, refresh.UserID)
+		if err != nil {
+			slog.WarnContext(ctx, "revoking all user tokens", "err", err)
+		}
+		return dto.TokenResponse{}, "", domain.ErrTokenReplayDetected
+	}
+
+	if time.Now().After(refresh.ExpiresAt) {
+		return dto.TokenResponse{}, "", domain.ErrInvalidToken
+	}
+
+	tokenEntity, newRawRefreshToken, err := s.issueRefreshToken(user.ID, userAgent, clientIP)
 	if err != nil {
 		return dto.TokenResponse{}, "", err
 	}
 
 	err = s.txManager.WithinTransaction(ctx, func(txCtx context.Context) error {
-		if err := s.repo.RevokeRefreshToken(txCtx, refresh.ID); err != nil {
-			return fmt.Errorf("revoking refresh token: %w", err)
-		}
 		if err := s.repo.CreateRefreshToken(txCtx, &tokenEntity); err != nil {
 			return fmt.Errorf("storing refresh token: %w", err)
+		}
+		if err := s.repo.RotateRefreshToken(txCtx, refresh.ID, tokenEntity.ID); err != nil {
+			return fmt.Errorf("rotating refresh token: %w", err)
 		}
 		return nil
 	})
@@ -132,7 +147,7 @@ func (s *Service) RefreshToken(ctx context.Context, rawRefreshToken, userAgent, 
 		return dto.TokenResponse{}, "", fmt.Errorf("issuing access token: %w", err)
 	}
 
-	return tokenResponse, rawRefreshToken, nil
+	return tokenResponse, newRawRefreshToken, nil
 }
 
 func (s *Service) Logout(ctx context.Context, rawRefreshToken string) error {

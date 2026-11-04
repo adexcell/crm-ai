@@ -34,7 +34,7 @@ func (p *Postgres) CreateRefreshToken(ctx context.Context, token *domain.Refresh
 func (p *Postgres) RevokeRefreshToken(ctx context.Context, id uuid.UUID) error {
 	sql := `
 	UPDATE refresh_tokens
-	SET is_revoked = true
+	SET is_revoked = true, revoked_at = NOW()
 	WHERE id = $1`
 
 	_, err := p.db.Executor(ctx).Exec(ctx, sql, id)
@@ -49,7 +49,7 @@ func (p *Postgres) GetRefreshTokenByHash(ctx context.Context, hash string) (*dom
 	sql := `
 	SELECT id, user_id, token_hash,
 		   user_agent, ip_address, expires_at,
-		   is_revoked, created_at
+		   is_revoked, created_at, revoked_at, replaced_by
 	FROM refresh_tokens
 	WHERE token_hash = $1`
 
@@ -77,6 +77,20 @@ func (p *Postgres) RevokeAllUserTokens(ctx context.Context, userID uuid.UUID) er
 	_, err := p.db.Executor(ctx).Exec(ctx, sql, userID)
 	if err != nil {
 		return fmt.Errorf("executing update token query: %w", err)
+	}
+
+	return nil
+}
+
+func (p *Postgres) RotateRefreshToken(ctx context.Context, oldID, newID uuid.UUID) error {
+	sql := `
+	UPDATE refresh_tokens
+	SET is_revoked = true, revoked_at = NOW(), revoked_by = $2
+	WHERE id = $1`
+
+	_, err := p.db.Executor(ctx).Exec(ctx, sql, oldID, newID)
+	if err != nil {
+		return fmt.Errorf("executing rotate refresh token query: %w", err)
 	}
 
 	return nil

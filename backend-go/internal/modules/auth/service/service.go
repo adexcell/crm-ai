@@ -34,6 +34,7 @@ type AuthRepository interface {
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
 	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
 	RevokeAllUserTokens(ctx context.Context, userID uuid.UUID) error
+	RotateRefreshToken(ctx context.Context, oldID, newID uuid.UUID) error
 
 	GetActiveSessions(ctx context.Context, userID uuid.UUID) ([]domain.RefreshToken, error)
 	RevokeUserSession(ctx context.Context, userID, sessionID uuid.UUID) error
